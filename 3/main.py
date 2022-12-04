@@ -1,8 +1,7 @@
-from dataclasses import dataclass
 import string
 
 file = "3/input.txt"
-# file = "3/test.txt"
+#  file = "3/test.txt"
 
 
 class Rucksack:
