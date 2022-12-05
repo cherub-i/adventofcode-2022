@@ -1,7 +1,5 @@
-import string
-
-file = "x/input.txt"
-#  file = "x/test.txt"
+file = "x/test.txt"
+# file = "x/input.txt"
 
 def main():
     print("=== Part One ===")
