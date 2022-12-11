@@ -1,9 +1,9 @@
-file = "x/test.txt"
-# file = "x/input.txt"
-
 def main():
+    the_file = "x/test.txt"
+    # the_file = "x/input.txt"
+
     print("=== Part One ===")
-    with open(file, "r", encoding="utf-8") as input_file:
+    with open(the_file, "r", encoding="utf-8") as input_file:
         line = input_file.readline().replace("\n", "")
 
         while line != "":
