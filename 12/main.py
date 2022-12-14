@@ -56,6 +56,11 @@ class Terrain:
     def get_char_count(self, char: str):
         return numpy.count_nonzero(self.landscape == char)
 
+    def move_start(self, pos: tuple) -> None:
+        self.landscape[self.start] = "a"
+        self.landscape[pos] = "S"
+        self.start: tuple = numpy.where(self.landscape == "S")
+
 
 class Route:
     def __init__(self, terrain: Terrain):
@@ -209,7 +214,9 @@ class Navi:
             elif self.is_longer_or_equal_than_solution(route):
                 self.route_list.remove(route)
 
-        if self.iterations == 1 or self.iterations % self.status_interval == 0:
+        if self.status_interval != -1 and (
+            self.iterations == 1 or self.iterations % self.status_interval == 0
+        ):
             self.print_status()
 
     def print_status(self) -> None:
@@ -237,11 +244,15 @@ class Navi:
         print(self.covered_terrain)
         print()
 
-    def print_solutions(self) -> None:
+    def print_solutions(self, count: int = -1) -> None:
         print("Shortest routes: ")
         self.route_to_destination_list.sort(key=lambda x: (x.steps))
-        for route in self.route_to_destination_list:
-            print(f"{route}")
+        if count != -1:
+            for route in self.route_to_destination_list[:count]:
+                print(f"{route}")
+        else:
+            for route in self.route_to_destination_list:
+                print(f"{route}")
 
     def is_longer_or_equal_than_solution(self, route: Route) -> bool:
         return self.least_moves != -1 and route.steps >= self.least_moves
@@ -253,7 +264,7 @@ class Navi:
 
 def main():
     the_file = "12/test.txt"
-    the_file = "12/test2.txt"
+    # the_file = "12/test2.txt"
     the_file = "12/input.txt"
 
     print("=== Part One ===")
@@ -262,16 +273,42 @@ def main():
             [list(line.replace("\n", "")) for line in input_file.readlines()]
         )
 
-    navi: Navi = Navi(terrain)
-    navi.status_interval = 10
+    least_moves = -1
+    starting_point_where: tuple = numpy.where(terrain.landscape == "a")
+    starting_point_list: list = [
+        (value, starting_point_where[1][i])
+        for i, value in enumerate(starting_point_where[0])
+    ]
+    starting_point_list.append((terrain.start[0][0], terrain.start[1][0]))
+    print(terrain)
 
-    while navi.has_routes():
-        navi.process_routes()
+    starting_point_list = list()
+    for i in range(42):
+        starting_point_list.append((i, 0))
 
-    print("--- done ----")
-    navi.print_status()
-    print()
-    navi.print_solutions()
+    for i, starting_point in enumerate(starting_point_list):
+        print(f"{i+1:4} / {len(starting_point_list):4}: {starting_point}. ")
+        terrain.move_start(starting_point)
+        print(terrain)
+
+        navi: Navi = Navi(terrain)
+        navi.status_interval = -1
+
+        while navi.has_routes():
+            navi.process_routes()
+
+        # print("--- done ----")
+        # navi.print_status()
+        # print()
+        # navi.print_solutions()
+
+        print(f"reached Target in {navi.least_moves}")
+        navi.print_solutions()
+        if least_moves == -1 or navi.least_moves < least_moves:
+            least_moves = navi.least_moves
+        print()
+
+    print(f"least possible moves are: {least_moves}")
 
 
 if __name__ == "__main__":
