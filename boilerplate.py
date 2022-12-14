@@ -1,9 +1,10 @@
 def main():
-    the_file = "x/test.txt"
-    # the_file = "x/input.txt"
+    day = 1
+    the_file = "test.txt"
+    # the_file = "input.txt"
 
     print("=== Part One ===")
-    with open(the_file, "r", encoding="utf-8") as input_file:
+    with open(f"{day}/{the_file}", "r", encoding="utf-8") as input_file:
         line = input_file.readline().replace("\n", "")
 
         while line != "":
