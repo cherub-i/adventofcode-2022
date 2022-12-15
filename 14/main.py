@@ -1,4 +1,8 @@
-import numpy
+import sys, os
+import numpy as np
+
+sys.path.insert(0, os.path.abspath("."))
+from utils import DataStructures
 
 
 class Sand:
@@ -18,12 +22,12 @@ class Sand:
         )
 
         for target_location in target_location_list:
-            if self.scan.get_scan_at_position(target_location) == ".":
-                self.scan.set_scan_at_position(self.position, ".")
+            if self.scan.image.get_data(target_location) == ".":
+                self.scan.image.set_data(self.position, ".")
                 self.position = target_location
-                self.scan.set_scan_at_position(target_location, "o")
+                self.scan.image.set_data(target_location, "o")
                 return
-        self.scan.set_scan_at_position(self.position, "O")
+        self.scan.image.set_data(self.position, "O")
         self.at_rest = True
 
 
@@ -35,8 +39,7 @@ class Scan:
         self.x_max: int = -1
         self.y_min: int = -1
         self.y_max: int = -1
-        self.x_shift: int = 0
-        self.data: numpy.ndarray
+        self.image: DataStructures.XYMatrix
 
     def add_rocks(self, formation: str) -> None:
         from_location = formation.split(" -> ")[0]
@@ -71,46 +74,20 @@ class Scan:
         self.y_min = 0
         self.y_max = max(y_coordinate_list)
 
-        self.x_shift = self.x_min - 1
-
-        self.data: numpy.ndarray = numpy.chararray(
-            (self.y_max + 1, (self.x_max - self.x_min) + 1 + 2)
+        self.image = DataStructures.XYMatrix(
+            (self.x_max - self.x_min + 1, self.y_max + 1)
         )
-        self.data[:] = "."
+        self.image.x_shift = self.x_min
+        self.image.print_line_numbers = True
 
         # sand
-        self.set_scan_at_position(self.sand_source_location, "+")
+        self.image.set_data(self.sand_source_location, "+")
 
         # rocks
         for start, end in self.rock_formation_list:
-            # vertical
-            if start[0] == end[0]:
-                for i in range(
-                    min(start[1], end[1]), max(start[1], end[1]) + 1
-                ):
-                    self.set_scan_at_position((start[0], i), "#")
-            # horizontal
-            elif start[1] == end[1]:
-                for i in range(
-                    min(start[0], end[0]), max(start[0], end[0]) + 1
-                ):
-                    self.set_scan_at_position((i, start[1]), "#")
-            else:
-                raise ValueError(f"unknown formation format: {start} - {end}")
+            self.image.set_data_line(start, end, "#")
 
-    def set_scan_at_position(self, position: tuple, content: str):
-        self.data[position[1], position[0] - self.x_shift] = content
-
-    def get_scan_at_position(self, position: tuple):
-        return chr(ord((self.data[position[1], position[0] - self.x_shift])))
-
-    def __str__(self) -> str:
-        content = ""
-        for row in self.data:
-            for element in row:
-                content += chr(element[0])
-            content += "\n"
-        return content
+        # self.image.extend(["<", ">"], 1)
 
 
 class MainLoop:
@@ -144,16 +121,18 @@ def main():
     scan.add_sand_source((500, 0))
 
     scan.initialise()
-    print(scan)
+    for line in str(scan.image).split("\n"):
+        print(line)
 
     print("=== Part One ===")
     main_loop: MainLoop = MainLoop(scan)
     try:
         while True:
             main_loop.step()
-            # print(scan)
+            # print(scan.image)
     except IndexError:
-        print(scan)
+        for line in str(scan.image).split("\n"):
+            print(line)
         print(f"number {len(main_loop.sand_list)} fell off")
 
 
