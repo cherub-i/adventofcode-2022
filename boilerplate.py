@@ -13,7 +13,7 @@ def main():
             line = input_file.readline().replace("\n", "")
         line = input_file.readline().replace("\n", "")
 
-    print(f"result {}")
+    print(f"result")
 
 
 if __name__ == "__main__":
