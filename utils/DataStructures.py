@@ -16,6 +16,22 @@ class XYMatrix:
         self.y_size: int = size[1]
         self.print_line_numbers: bool = False
 
+    @property
+    def x_min(self):
+        return 0 + self.x_shift
+
+    @property
+    def y_min(self):
+        return 0 + self.y_shift
+
+    @property
+    def x_max(self):
+        return self.x_size + self.x_shift - 1
+
+    @property
+    def y_max(self):
+        return self.y_size + self.y_shift - 1
+
     def extend(self, direction_list: list[str], amount):
         for direction in direction_list:
             if direction not in XYMatrix.valid_direction_list:
@@ -43,11 +59,13 @@ class XYMatrix:
             self.data = new_data
 
     def set_data(self, position: tuple, content: str) -> None:
+        self.check_positions([position])
         self.data[
             position[1] - self.y_shift, position[0] - self.x_shift
         ] = content
 
     def set_data_line(self, start: tuple, end: tuple, content: str) -> None:
+        self.check_positions([start, end])
         ordered_start = (
             min(start[0], end[0]),
             min(start[1], end[1]),
@@ -71,6 +89,7 @@ class XYMatrix:
             )
 
     def get_data(self, position: tuple):
+        self.check_positions([position])
         return chr(
             ord(
                 (
@@ -81,9 +100,24 @@ class XYMatrix:
             )
         )
 
+    def check_positions(self, position_list: list[tuple]) -> None:
+        for position in position_list:
+            if not self.contains(position):
+                raise IndexError(
+                    f"Position {position} is not part of the matrix with top left: ({self.x_min}, {self.y_min}) and bottom right:  ({self.x_max}, {self.y_max})"
+                )
+
+    def contains(self, position: tuple) -> bool:
+        if (
+            self.x_min <= position[0] <= self.x_max
+            and self.y_min <= position[1] <= self.y_max
+        ):
+            return True
+        return False
+
     def __str__(self) -> str:
-        line_number_width = len(str(self.y_shift + self.data.shape[1]))
-        line_number_height = len(str(self.x_shift + self.data.shape[0]))
+        line_number_width = len(str(self.y_max))
+        line_number_height = len(str(self.x_max))
         content = ""
 
         if self.print_line_numbers:
@@ -115,6 +149,10 @@ class XYMatrix:
     @classmethod
     def is_content_valid(cls, content: str) -> bool:
         return content != " " and len(content) == 1
+
+    @classmethod
+    def manhatten_distance(cls, point_a, point_b) -> int:
+        return abs(point_a[0] - point_b[0]) + abs(point_a[1] - point_b[1])
 
 
 def main():
