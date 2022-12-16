@@ -150,9 +150,11 @@ class XYMatrix:
     def is_content_valid(cls, content: str) -> bool:
         return content != " " and len(content) == 1
 
-    @classmethod
-    def manhatten_distance(cls, point_a, point_b) -> int:
-        return abs(point_a[0] - point_b[0]) + abs(point_a[1] - point_b[1])
+    @staticmethod
+    def distance(point_a, point_b) -> tuple[int, int, int]:
+        x_distance = abs(point_a[0] - point_b[0])
+        y_distance = abs(point_a[1] - point_b[1])
+        return x_distance, y_distance, x_distance + y_distance
 
 
 def main():

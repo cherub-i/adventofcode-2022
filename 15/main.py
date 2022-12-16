@@ -4,15 +4,16 @@ import re
 
 sys.path.insert(0, os.path.abspath("."))
 from utils.DataStructures import XYMatrix
+from utils.Timer import Timer
 
 
 class Sensor:
     def __init__(self, position, position_closest_beacon):
         self.position: tuple = position
         self.position_closest_beacon: tuple = position_closest_beacon
-        self.distance_to_closest_beacon = XYMatrix.manhatten_distance(
+        self.distance_to_closest_beacon = XYMatrix.distance(
             self.position, self.position_closest_beacon
-        )
+        )[2]
         self.covered_area: list[tuple] = list()
         # self.calculate_covered_area()
 
@@ -26,7 +27,7 @@ class Sensor:
                 self.position[1] + self.distance_to_closest_beacon + 1,
             ):
                 if (
-                    XYMatrix.manhatten_distance(self.position, (x, y))
+                    XYMatrix.distance(self.position, (x, y))[2]
                     <= self.distance_to_closest_beacon
                 ):
                     self.covered_area.append((x, y))
@@ -37,6 +38,7 @@ class Sensor:
 
 def main():
     day = 15
+
     the_file = "test.txt"
     y_requested: int = 10
     xy_min = 0
@@ -100,9 +102,7 @@ def main():
         for x in range(x_min, x_max + 1):
             for sensor in relevant_sensor_list:
                 if (
-                    XYMatrix.manhatten_distance(
-                        sensor.position, (x, y_requested)
-                    )
+                    XYMatrix.distance(sensor.position, (x, y_requested))[2]
                     <= sensor.distance_to_closest_beacon
                 ):
                     x_covered_count += 1
@@ -117,6 +117,8 @@ def main():
         )
 
     print("=== Part Two ===")
+    timer = Timer()
+
     relevant_sensor_list: list[Sensor] = list()
     for sensor in sensor_list:
         if (
@@ -131,19 +133,29 @@ def main():
     for sensor in relevant_sensor_list:
         print(sensor)
 
-    x = 0
-    y = 0
+    x: int = 0
+    y: int = 0
     found = False
+    timer.iteration_max = xy_max
+    timer.iteration_interval = 5000
     for y in range(xy_min, xy_max + 1):
-        if y % 100 == 0:
-            print(f"{y/xy_max:.2f}%")
-        for x in range(xy_min, xy_max + 1):
+        timer.print_iteration(y)
+        x = 0
+        while x <= xy_max:
             found = True
             for sensor in relevant_sensor_list:
-                distance_to_sensor = XYMatrix.manhatten_distance(
-                    sensor.position, (x, y)
-                )
+                (
+                    x_distance_to_sensor,
+                    y_distance_to_sensor,
+                    distance_to_sensor,
+                ) = XYMatrix.distance(sensor.position, (x, y))
                 if distance_to_sensor <= sensor.distance_to_closest_beacon:
+                    x = (
+                        sensor.position[0]
+                        + sensor.distance_to_closest_beacon
+                        - y_distance_to_sensor
+                        + 1
+                    )
                     found = False
                     break
             if found:
