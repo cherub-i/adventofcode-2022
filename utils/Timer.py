@@ -8,24 +8,28 @@ class Timer:
         self.time_init = self.take_time()
         self.time_start = self.take_time()
         self.time_previous_iteration = self.take_time()
-        self.iteration_interval: int = 1
-        self.iteration_max: int = -1
+        self.print_iteration_interval: int = 1
+        self.max_no_iterations: int = -1
         locale.setlocale(
             locale.LC_ALL, ""
         )  # Use '' for auto, or force e.g. to 'en_US.UTF-8'
 
     def set_max_iteration(self, max_iteration: int):
-        self.iteration_max: int = max_iteration
+        self.max_no_iterations: int = max_iteration
 
     def print_start(self):
         self.time_start = self.take_time()
         content = "Starting"
-        if self.iteration_max != -1:
-            content += f", target is {self.iteration_max} iterations"
+        if self.max_no_iterations != -1:
+            content += f", target is {self.max_no_iterations} iterations"
         print(content)
 
     def print_iteration(self, iteration: int):
-        if iteration % self.iteration_interval == 0:
+        iteration_no = iteration + 1
+        if (
+            iteration_no == 1
+            or iteration_no % self.print_iteration_interval == 0
+        ):
             time_current_iteration = self.take_time()
             time_since_start = time_current_iteration - self.time_start
             time_since_previous_iteration = (
@@ -34,21 +38,21 @@ class Timer:
             done_percentage: float = 0
             content = ""
 
-            if self.iteration_max != -1 and iteration != 0:
-                iteration_max_as_string = f"{self.iteration_max:n}"
-                iteration_as_string = f"{iteration:n}".rjust(
+            if self.max_no_iterations != -1 and iteration_no != 0:
+                iteration_max_as_string = f"{self.max_no_iterations:n}"
+                iteration_as_string = f"{iteration_no:n}".rjust(
                     len(iteration_max_as_string)
                 )
-                done_percentage = iteration / self.iteration_max
+                done_percentage = iteration_no / self.max_no_iterations
                 content += f"{iteration_as_string}/{iteration_max_as_string} ({done_percentage * 100:5.1f}%)"
             else:
-                content = f"{iteration:4n}"
+                content = f"{iteration_no:4n}"
             content += f": {Timer.pretty_time(time_since_previous_iteration)} this iteration / {Timer.pretty_time(time_since_start)} since start"
-            if self.iteration_max != -1 and iteration != 0:
+            if self.max_no_iterations != -1 and iteration_no != 0:
                 total_expected_time = (
                     time_since_start
-                    / iteration
-                    * (self.iteration_max - iteration)
+                    / iteration_no
+                    * (self.max_no_iterations - iteration_no)
                 )
                 content += f" / {Timer.pretty_time(total_expected_time)} expected total"
             print(content)

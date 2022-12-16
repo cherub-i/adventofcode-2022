@@ -2,7 +2,7 @@ import sys, os
 import numpy as np
 
 sys.path.insert(0, os.path.abspath("."))
-from utils import DataStructures
+from datastructures import XYMatrix
 
 
 class Sand:
@@ -43,7 +43,7 @@ class Scan:
         self.x_max: int = -1
         self.y_min: int = -1
         self.y_max: int = -1
-        self.image: DataStructures.XYMatrix
+        self.image: XYMatrix.XYMatrix
 
     def add_rocks(self, formation: str) -> None:
         from_location = formation.split(" -> ")[0]
@@ -78,7 +78,7 @@ class Scan:
         self.y_min = 0
         self.y_max = max(y_coordinate_list)
 
-        self.image = DataStructures.XYMatrix(
+        self.image = XYMatrix.XYMatrix(
             (self.x_max - self.x_min + 1, self.y_max + 1)
         )
         self.image.x_shift = self.x_min

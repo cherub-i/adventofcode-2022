@@ -3,7 +3,7 @@ import numpy as np
 import re
 
 sys.path.insert(0, os.path.abspath("."))
-from utils.DataStructures import XYMatrix
+from datastructures.XYMatrix import XYMatrix
 from utils.Timer import Timer
 
 
@@ -136,8 +136,8 @@ def main():
     x: int = 0
     y: int = 0
     found = False
-    timer.iteration_max = xy_max
-    timer.iteration_interval = 5000
+    timer.max_no_iterations = xy_max
+    timer.print_iteration_interval = 5000
     for y in range(xy_min, xy_max + 1):
         timer.print_iteration(y)
         x = 0
