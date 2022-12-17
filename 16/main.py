@@ -3,68 +3,7 @@ import re
 
 sys.path.insert(0, os.path.abspath("."))
 from utils.Timer import Timer
-from datastructures.Net import *
-
-
-class MainLoop:
-    def __init__(self, net: Net):
-        self.net: Net = net
-        self.node_name_current: str = ""
-        self.node_name_target: str = ""
-        self.open_valve_list: list[tuple[str, int]] = list()
-        self.pressure_drop_total = 0
-
-    def step(self):
-        self.calculate_pressure_drop()
-        if self.node_name_target == "":
-            self.find_target()
-            path_finder = PathFinder(
-                self.net.get_node(self.node_name_current),
-                self.net.get_node(self.node_name_target),
-            )
-            path_finder.build_routes_to_target()
-            self.path: Path = path_finder.path_list[0]
-            self.path_at = 0
-            print(f"determined path {self.path}, currently at {self.path_at}")
-
-        if self.node_name_current == self.node_name_target:
-            # at target, open valve
-            self.open_valve_list.append(
-                (
-                    self.node_name_current,
-                    self.net.get_node(self.node_name_target).value,
-                )
-            )
-            print(
-                f"opening valve {self.open_valve_list[-1][0]} will yield {self.open_valve_list[-1][1]}"
-            )
-            self.net.get_node(self.node_name_target).value = 0
-            self.node_name_target = ""
-        else:
-            # move to target
-            node_name_next = self.path.node_traveled_list[
-                self.path_at + 1
-            ].name
-            print(f"moving from {self.node_name_current} to {node_name_next}")
-
-            self.node_name_current = node_name_next
-            self.path_at += 1
-        print(f"pressure drop now is: {self.pressure_drop_total}")
-
-    def find_target(self):
-        node_list = self.get_node_list_by_value()
-        self.node_name_target = node_list[0].name
-
-    def calculate_pressure_drop(self):
-        for valve_name, valve_pressure_drop in self.open_valve_list:
-            self.pressure_drop_total += valve_pressure_drop
-
-    def get_node_list_by_value(self) -> list[Node]:
-        node_list_by_value: list[Node] = list()
-        for node in self.net.node_list.values():
-            node_list_by_value.append(node)
-        node_list_by_value.sort(key=lambda x: x.value, reverse=True)
-        return node_list_by_value
+from datastructures.Net import Net, Node, Edge
 
 
 def main():
@@ -73,6 +12,7 @@ def main():
     # the_file = "input.txt"
 
     timer: Timer = Timer()
+    # valve_list: dict[str, Valve] = dict()
     net: Net = Net()
     connection_list: list[tuple] = list()
 
@@ -85,7 +25,7 @@ def main():
         while line != "":
             matches = pattern.findall(line)
             for match in matches:
-                net.add_node(Node(match[0], int(match[1]), 0))
+                net.add_node(Node(match[0], int(match[1])))
                 for target_valve_name in match[2].split(", "):
                     connection_list.append((match[0], target_valve_name))
             line = input_file.readline().replace("\n", "")
@@ -93,17 +33,42 @@ def main():
     for connection in connection_list:
         net.add_edge(connection[0], connection[1], 0, 1)
 
-    main_loop: MainLoop = MainLoop(net)
-    main_loop.node_name_current = "AA"
-
-    timer.max_no_iterations = 30
-    for time in range(0, 30):
-        timer.print_iteration(time)
-        main_loop.step()
+    net.calculate_path_list()
 
     print("=== Part One ===")
+    timer.max_no_iterations = 30
+    current_position = "AA"
 
-    print("result")
+    time_left = 30
+    pressure_drop = 0
+    while time_left > 0:
+        action_value_list: list[tuple[str, int, int]] = list()
+        for node in net.node_list.values():
+            time_to_node: int = (
+                net.distance_dict[current_position][node.name] + 1
+            )
+            value: int = (time_left - time_to_node) * node.value
+            if value > 0:
+                action_value_list.append((node.name, value, time_to_node))
+        action_value_list.sort(key=lambda x: x[1], reverse=True)
+        if action_value_list:
+            target_node_name = action_value_list[0][0]
+            target_node_pressure_drop = action_value_list[0][1]
+            target_node_time_taken = action_value_list[0][2]
+            print(
+                f"minute {30 - time_left}: moving to valve {target_node_name} and opening it, which takes {target_node_time_taken} minutes and yields {target_node_pressure_drop} pressure drop"
+            )
+            current_position = target_node_name
+            net.get_node(target_node_name).value = 0
+            time_left -= target_node_time_taken
+            pressure_drop += target_node_pressure_drop
+        else:
+            time_left = 0
+            print(
+                f"minute {30 - time_left}: nothing more to be done in the remaining time"
+            )
+
+    print(f"total pressure drop is {pressure_drop}")
 
 
 if __name__ == "__main__":

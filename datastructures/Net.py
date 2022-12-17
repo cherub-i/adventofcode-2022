@@ -4,6 +4,7 @@ from copy import copy
 class Net:
     def __init__(self):
         self.node_list: dict[str, Node] = dict()
+        self.distance_dict: dict[str, dict[str, int]] = dict()
 
     def add_node(self, node: "Node"):
         if node not in self.node_list:
@@ -21,6 +22,41 @@ class Net:
 
     def get_node(self, node_name: str) -> "Node":
         return self.node_list[node_name]
+
+    def calculate_path_list(self):
+        for node_name_outer, node_outer in self.node_list.items():
+            self.distance_dict[node_name_outer] = dict()
+            for node_name_innner in self.node_list.keys():
+                self.distance_dict[node_name_outer][node_name_innner] = -1
+            for edge in node_outer.edge_list:
+                self.distance_dict[edge.node_from.name][
+                    edge.node_to.name
+                ] = edge.cost
+
+        is_ready = False
+        while not is_ready:
+            is_ready = True
+            for (
+                node_from_name,
+                node_from_path_dict,
+            ) in self.distance_dict.items():
+                node_from_connection_list: list[tuple[str, int]] = list()
+                for to_node_name, cost in node_from_path_dict.items():
+                    if cost > 0:
+                        node_from_connection_list.append((to_node_name, cost))
+                for node_from_connection in node_from_connection_list:
+                    for connection_to in node_from_connection_list:
+                        if node_from_connection != connection_to:
+                            new_from = node_from_connection[0]
+                            new_to = connection_to[0]
+                            new_distance = (
+                                node_from_connection[1] + connection_to[1]
+                            )
+                            if self.distance_dict[new_from][new_to] == -1:
+                                self.distance_dict[new_from][
+                                    new_to
+                                ] = new_distance
+                                is_ready = False
 
 
 class Node:
@@ -55,77 +91,31 @@ class Edge:
         )
 
 
-class PathFinder:
-    def __init__(self, node_from: Node, node_to: Node):
-        self.node_from: Node = node_from
-        self.node_to: Node = node_to
-        self.path_list: list[Path] = list()
-        self.has_arrived = False
-        self.cost_of_travel = -1
-
-    def build_routes_to_target(self):
-        if not self.path_list:
-            for edge in self.node_from.edge_list:
-                path: Path = Path()
-                path.add_start(edge.node_from)
-                path.travel(edge)
-                self.path_list.append(path)
-                if edge.node_to == self.node_to:
-                    self.has_arrived = True
-        else:
-            new_path_list: list[Path] = list()
-            while self.path_list:
-                path = self.path_list.pop()
-                if path.last_node() == self.node_to:
-                    self.has_arrived = True
-                    new_path_list.append(path)
-                else:
-                    for edge in path.last_node().edge_list:
-                        if edge.node_to not in path.node_traveled_list:
-                            new_path = path.get_copy()
-                            new_path.travel(edge)
-                            new_path_list.append(new_path)
-                            if edge.node_to == self.node_to:
-                                self.has_arrived = True
-            self.path_list = new_path_list
-
-        if self.has_arrived:
-            self.remove_unarrived_pathes()
-            self.path_list.sort(key=lambda x: x.cost)
-        else:
-            self.build_routes_to_target()
-
-    def remove_unarrived_pathes(self):
-        for path in self.path_list:
-            if path.last_node() != self.node_to:
-                self.path_list.remove(path)
-
-
 class Path:
     def __init__(self):
-        self.node_traveled_list: list[Node] = list()
+        self.node_list: list[Node] = list()
         self.step_list: list[str] = list()
         self.cost: int = 0
 
     def last_node(self) -> Node:
-        return self.node_traveled_list[-1]
+        return self.node_list[-1]
 
     def add_start(self, node: Node) -> None:
-        self.node_traveled_list.append(node)
+        self.node_list.append(node)
 
     def travel(self, edge: Edge) -> None:
         self.add_step(edge.node_to, edge.cost)
 
     def add_step(self, node: Node, cost: int) -> None:
-        self.node_traveled_list.append(node)
+        self.node_list.append(node)
         self.step_list.append(
-            f"{self.node_traveled_list[-2].name}>{self.last_node().name}"
+            f"{self.node_list[-2].name}>{self.last_node().name}"
         )
         self.cost += cost
 
     def get_copy(self) -> "Path":
         new_path: Path = Path()
-        new_path.node_traveled_list = copy(self.node_traveled_list)
+        new_path.node_list = copy(self.node_list)
         new_path.step_list = copy(self.step_list)
         new_path.cost = self.cost
         return new_path
