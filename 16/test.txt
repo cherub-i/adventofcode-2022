@@ -8,3 +8,15 @@ Valve GG has flow rate=0; tunnels lead to valves FF, HH
 Valve HH has flow rate=22; tunnel leads to valve GG
 Valve II has flow rate=0; tunnels lead to valves AA, JJ
 Valve JJ has flow rate=21; tunnel leads to valve II
+
+----
+solution
+1: move ot DD
+2: open DD
+3: move to CC
+4: move to BB
+5: open BB
+6: move to AA
+7: move to II
+
+-> move-value is calcualted as yield from target-node + max(yield from target-node-connections)

@@ -1,19 +1,14 @@
-import sys, os
 import re
-
-sys.path.insert(0, os.path.abspath("."))
-from utils.Timer import Timer
-from datastructures.Net import Net, Node, Edge, Path
 
 
 class MainLoop:
-    def __init__(self, net: Net, node_name_start: str, time_max: int):
-        self.net: Net = net
-        self.node_name_current: str = node_name_start
+    def __init__(
+        self, valve_list: list["Valve"], valve_start: "Valve", time_max: int
+    ):
+        self.valve_dict: dict[Valve] = valve_list
+        self.valve_current: Valve = valve_start
         self.time_max = time_max
-        self.node_name_target: str = ""
-        self.path_to_target: Path = None
-        self.open_valve_list: list[int] = list()
+        self.valve_target: Valve = None
         self.pressure_release_total: int = 0
         self.time_current = 0
 
@@ -23,68 +18,73 @@ class MainLoop:
 
     def step(self) -> None:
         self.yield_open_valves()
+        print(f"== Minute {self.time_current + 1} ==")
         print(
-            f"minute {self.time_current:2}: I am at {self.node_name_current}"
+            f"Open valves: {', '.join([valve.name for valve in self.valve_dict.values() if valve.is_open])}"
         )
-        if self.node_name_target == "":
-            path_to_target = self.find_target()
-            if path_to_target is not None:
-                self.path_to_target = self.find_target()
-                self.node_name_target = self.path_to_target.end().name
-                print(f"  set new target path: {self.path_to_target}")
+        print(f"I am at {self.valve_current.name}")
+
+        adjacent_valve_value_list = self.get_adjacent_valve_value_list()
+        max_move_value: int = 0
+        if len(adjacent_valve_value_list) > 0:
+            max_move_value = adjacent_valve_value_list[0][0]
+            current_valve_value = self.valve_current.value_over_duration(
+                self.time_left - 1
+            )
+            if current_valve_value > max_move_value:
+                print(f"  opening valve: {self.valve_current.name}")
+                self.valve_current.is_open = True
             else:
-                self.node_name_target = "STOP"
-                print(f"  no new targets")
-
-        node_current: Node = self.net.get_node(self.node_name_current)
-        if self.node_name_target == "STOP":
-            print(f"  waiting for end")
-        elif node_current.name == self.node_name_target:
-            # at target
-            print(f"  opening valve at target: {self.node_name_current}")
-            self.node_name_target = ""
-            self.path_to_target = None
-
-            self.open_valve_list.append(node_current.value)
-            node_current.value = 0
-        elif node_current.value > 0:
-            # I am at a position with a closed valve, which yields
-            print(f"  opening valve at: {self.node_name_current}")
-            self.open_valve_list.append(node_current.value)
-            node_current.value = 0
+                print(f"  moving to: {adjacent_valve_value_list[0][1].name}")
+                self.valve_current = adjacent_valve_value_list[0][1]
         else:
-            # nothing to do here, move to next node
-            node_name_next = "unknown"
-            for i, node in enumerate(self.path_to_target.node_list):
-                if node == node_current:
-                    node_name_next = self.path_to_target.node_list[i + 1].name
-                    break
-            print(f"  moving to: {node_name_next}")
-            self.node_name_current = node_name_next
+            print(f"nowhere to go")
 
         self.time_current += 1
         print(f"  pressure release up to now: {self.pressure_release_total}")
 
     def yield_open_valves(self) -> None:
-        for pressure_release in self.open_valve_list:
-            self.pressure_release_total += pressure_release
+        pressure_release = 0
+        for valve in self.valve_dict.values():
+            if valve.is_open:
+                pressure_release += valve.flow_rate
+        self.pressure_release_total += pressure_release
 
-    def find_target(self) -> Path:
-        node_value_list: list[tuple[int, Path]] = list()
-        for node in self.net.node_list.values():
-            if node.name in self.net.distance_dict[self.node_name_current]:
-                path_to_node: Path = self.net.distance_dict[
-                    self.node_name_current
-                ][node.name]
-                value_of_node: int = (
-                    self.time_left - path_to_node.cost - 1
-                ) * node.value
-                if value_of_node > 0:
-                    node_value_list.append((value_of_node, path_to_node))
-        node_value_list.sort(key=lambda x: x[0], reverse=True)
-        if len(node_value_list) == 0:
-            return None
-        return node_value_list[0][1]
+    def get_adjacent_valve_value_list(self) -> list[tuple[int, "Valve"]]:
+        adjacent_valve_value_list: list[tuple[int, Valve]] = list()
+        for next_valve_name in self.valve_current.adjacent_valve_list:
+            next_valve = self.valve_dict[next_valve_name]
+            value: int = next_valve.value_over_duration(self.time_left - 1)
+            for next_valve_child_name in next_valve.adjacent_valve_list:
+                next_valve_child = self.valve_dict[next_valve_child_name]
+                if next_valve_child != self.valve_current:
+                    value_incl_child = (
+                        value
+                        + next_valve_child.value_over_duration(
+                            self.time_left - 1 - 2
+                        )
+                    )
+                    if value_incl_child > value:
+                        value = value_incl_child
+            adjacent_valve_value_list.append((value, next_valve))
+        adjacent_valve_value_list.sort(key=lambda x: x[0], reverse=True)
+        return adjacent_valve_value_list
+
+
+class Valve:
+    def __init__(self, name: str, flow_rate: int):
+        self.name: str = name
+        self.flow_rate: int = flow_rate
+        self.adjacent_valve_list: list[Valve] = list()
+        self.is_open: bool = False
+
+    def add_adjacent_valve(self, valve: "Valve"):
+        self.adjacent_valve_list.append(valve)
+
+    def value_over_duration(self, duration: int) -> int:
+        if self.is_open:
+            return 0
+        return self.flow_rate * duration
 
 
 def main():
@@ -92,7 +92,7 @@ def main():
     the_file = "test.txt"
     # the_file = "input.txt"
 
-    net: Net = Net()
+    valve_dict: dict[str, Valve] = dict()
     connection_list: list[tuple] = list()
 
     pattern = re.compile(
@@ -104,18 +104,16 @@ def main():
         while line != "":
             matches = pattern.findall(line)
             for match in matches:
-                net.add_node(Node(match[0], int(match[1])))
+                valve_dict[match[0]] = Valve(match[0], int(match[1]))
                 for target_valve_name in match[2].split(", "):
                     connection_list.append((match[0], target_valve_name))
             line = input_file.readline().replace("\n", "")
 
     for connection in connection_list:
-        net.add_edge(connection[0], connection[1], 0, 1)
-
-    net.calculate_path_list()
+        valve_dict[connection[0]].add_adjacent_valve(connection[1])
 
     print("=== Part One ===")
-    main_loop: MainLoop = MainLoop(net, "AA", 30)
+    main_loop: MainLoop = MainLoop(valve_dict, valve_dict["AA"], 30)
 
     while main_loop.time_left > 0:
         main_loop.step()
